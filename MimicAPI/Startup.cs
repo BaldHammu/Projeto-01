@@ -11,12 +11,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MimicAPI.Repositories;
+using MimicAPI.Repositories.Contracts;
+using AutoMapper;
+using MimicAPI.Helpers;
 
 namespace MimicAPI
 {
     public class Startup
     {
-        MvcOptions options = new MvcOptions();
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -27,14 +30,22 @@ namespace MimicAPI
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<MimicContext>(opt => {
-                opt.UseSqlite("Data Source = Database\\Mimic.db");    
-            });
-            services.AddRazorPages();
-            services.AddMvc();
-            options.EnableEndpointRouting = false;
-        }
 
+            #region AutoMapper-Config
+            var config = new MapperConfiguration( cfg=> {
+                cfg.AddProfile(new MapperProfile());
+            });
+            IMapper mapper = config.CreateMapper();
+            services.AddSingleton(mapper);
+            #endregion  
+            services.AddDbContext<MimicContext>(opt =>
+            {
+                opt.UseSqlite("Data Source = Database\\Mimic.db");
+            });
+            services.AddControllers();
+            services.AddRazorPages();
+            services.AddScoped<IPalavraRepository, PalavraRepository>();
+        }
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -49,17 +60,14 @@ namespace MimicAPI
                 app.UseHsts();
             }
 
-            app.UseMvc();
-            app.UseHttpsRedirection();
             app.UseStaticFiles();
-
             app.UseRouting();
-
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+                endpoints.MapControllers();
             });
         }
     }
